@@ -51,6 +51,16 @@ module Chatwoot
     enterprise_initializers = Rails.root.join('enterprise/config/initializers')
     Dir[enterprise_initializers.join('**/*.rb')].each { |f| require f } if enterprise_initializers.exist?
 
+    # [CUSTOM] Load custom extensions (bpipl/chatwoot fork)
+    if ChatwootApp.custom?
+      config.eager_load_paths += Dir["#{Rails.root}/custom/app/**"]
+      config.eager_load_paths << Rails.root.join('custom/lib')
+      config.paths['app/views'].unshift('custom/app/views')
+
+      custom_initializers = Rails.root.join('custom/config/initializers')
+      Dir[custom_initializers.join('**/*.rb')].sort.each { |f| require f } if custom_initializers.exist?
+    end
+
     # Settings in config/environments/* take precedence over those specified here.
     # Application configuration can go into files in config/initializers
     # -- all .rb files in that directory are automatically loaded after loading
