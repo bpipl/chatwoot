@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Share</title>
+<style>
+  :root {
+    --accent: #1B83FF;
+    --accent-hover: #1470E0;
+    --accent-bg: #EEF4FF;
+    --green: #16A34A;
+    --green-bg: #DCFCE7;
+    --red: #DC2626;
+    --orange: #EA580C;
+    --bg: #F8F9FB;
+    --card: #FFFFFF;
+    --border: #E5E7EB;
+    --text: #1F2937;
+    --muted: #6B7280;
+    --dim: #9CA3AF;
+    --r: 8px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); font-size: 13px; }
+
+  .header { position: sticky; top: 0; z-index: 10; background: var(--card); border-bottom: 1px solid var(--border); padding: 10px 14px; }
+  .header-row { display: flex; align-items: center; justify-content: space-between; }
+  .header-title { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+  .contact-line { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* Bulk actions bar */
+  .bulk-bar { display: none; padding: 6px 14px; background: var(--accent-bg); border-bottom: 1px solid #D1E5FF; align-items: center; justify-content: space-between; }
+  .bulk-bar.show { display: flex; }
+  .bulk-bar span { font-size: 12px; color: var(--accent); font-weight: 500; }
+  .bulk-actions { display: flex; gap: 6px; }
+
+  /* Buttons */
+  .btn { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 11px; font-weight: 500; cursor: pointer; transition: all 0.12s; white-space: nowrap; }
+  .btn:hover { background: #F3F4F6; }
+  .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-danger { color: var(--red); border-color: #FCA5A5; }
+  .btn-danger:hover { background: #FEF2F2; }
+  .btn-ghost { border: none; background: none; color: var(--muted); padding: 4px 6px; }
+  .btn-ghost:hover { color: var(--text); background: #F3F4F6; }
+
+  /* Conversation card */
+  .conv { margin: 6px 10px; background: var(--card); border: 1px solid var(--border); border-radius: var(--r); transition: all 0.12s; }
+  .conv:hover { border-color: #D1D5DB; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  .conv.sel { border-color: var(--accent); background: #FAFCFF; }
+
+  .conv-row { display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px; }
+  .conv-cb { margin-top: 3px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+  .conv-body { flex: 1; min-width: 0; }
+  .conv-top { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .conv-id { font-weight: 600; font-size: 12px; color: var(--accent); cursor: pointer; }
+  .conv-id:hover { text-decoration: underline; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .dot-open { background: var(--green); }
+  .dot-resolved { background: var(--dim); }
+  .dot-pending { background: var(--orange); }
+  .conv-inbox { font-size: 10px; color: var(--dim); background: #F3F4F6; padding: 1px 6px; border-radius: 4px; }
+  .conv-time { font-size: 10px; color: var(--dim); margin-left: auto; flex-shrink: 0; }
+  .conv-msg { font-size: 12px; color: var(--muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* Share row inside card */
+  .share-row { padding: 0 10px 8px 30px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .chip { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 500; }
+  .chip-shared { background: var(--green-bg); color: var(--green); }
+  .chip-remove { cursor: pointer; opacity: 0.5; font-size: 13px; line-height: 1; }
+  .chip-remove:hover { opacity: 1; }
+  .share-add { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 500; background: var(--accent-bg); color: var(--accent); cursor: pointer; border: 1px dashed var(--accent); }
+  .share-add:hover { background: #DCE9FF; }
+
+  /* Inline dropdown */
+  .dropdown { position: absolute; z-index: 50; background: var(--card); border: 1px solid var(--border); border-radius: var(--r); box-shadow: 0 8px 24px rgba(0,0,0,0.12); width: 240px; max-height: 280px; overflow-y: auto; }
+  .dropdown.hidden { display: none; }
+  .dd-search { width: 100%; padding: 8px 10px; border: none; border-bottom: 1px solid var(--border); font-size: 12px; outline: none; }
+  .dd-section { padding: 4px 0; }
+  .dd-label { font-size: 10px; font-weight: 600; color: var(--dim); text-transform: uppercase; letter-spacing: 0.5px; padding: 4px 12px; }
+  .dd-item { display: flex; align-items: center; gap: 8px; padding: 6px 12px; cursor: pointer; transition: background 0.08s; font-size: 12px; }
+  .dd-item:hover { background: #F3F4F6; }
+  .dd-item.active { background: var(--accent-bg); }
+  .dd-avatar { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #fff; flex-shrink: 0; }
+  .dd-avatar-team { background: linear-gradient(135deg, #6366F1, #8B5CF6); }
+  .dd-avatar-agent { background: linear-gradient(135deg, #3B82F6, #60A5FA); }
+  .dd-name { font-weight: 500; }
+  .dd-sub { font-size: 10px; color: var(--dim); }
+  .dd-check { margin-left: auto; color: var(--accent); }
+
+  .loading { display: flex; align-items: center; justify-content: center; padding: 40px; color: var(--dim); }
+  .spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.5s linear infinite; margin-right: 8px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .empty { text-align: center; padding: 30px 20px; color: var(--dim); font-size: 12px; }
+  .toast { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); background: #1F2937; color: #fff; padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 500; z-index: 200; opacity: 0; transition: opacity 0.25s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+  .shortcuts { padding: 6px 14px; border-top: 1px solid var(--border); font-size: 10px; color: var(--dim); display: flex; gap: 10px; flex-wrap: wrap; }
+  .kbd { display: inline-block; padding: 0 4px; background: #F3F4F6; border: 1px solid var(--border); border-radius: 3px; font-family: monospace; font-size: 10px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-row">
+    <div class="header-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      Share
+    </div>
+    <button class="btn btn-ghost" onclick="selectAllToggle()" title="Select all (A)">Select all</button>
+  </div>
+  <div class="contact-line" id="contactLine">Loading...</div>
+</div>
+
+<div class="bulk-bar" id="bulkBar">
+  <span><span id="bulkCount">0</span> selected</span>
+  <div class="bulk-actions">
+    <button class="btn btn-primary" onclick="bulkShare()">Share selected</button>
+    <button class="btn btn-danger" onclick="bulkUnshare()">Unshare</button>
+    <button class="btn btn-ghost" onclick="deselectAll()">Clear</button>
+  </div>
+</div>
+
+<div id="list" class="conv-list">
+  <div class="loading"><div class="spinner"></div>Loading...</div>
+</div>
+
+<div class="shortcuts">
+  <span><span class="kbd">Space</span> Select</span>
+  <span><span class="kbd">J/K</span> Nav</span>
+  <span><span class="kbd">A</span> All</span>
+  <span><span class="kbd">S</span> Share</span>
+</div>
+
+<!-- Floating dropdown (reused) -->
+<div class="dropdown hidden" id="dropdown">
+  <input type="text" class="dd-search" id="ddSearch" placeholder="Search..." oninput="renderDropdown()">
+  <div id="ddList"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API_TOKEN = 'PPok8wzrH1CMH6uttJrqSE2Q';
+const ACCOUNT_ID = 1;
+const BASE = window.location.origin;
+
+let conversations = [], agents = [], teams = [];
+let contact = null, selectedIds = new Set(), focusIdx = -1;
+let ddTarget = null, ddConvId = null; // which conversation the dropdown is for
+
+// ── Chatwoot context ──
+window.addEventListener('message', e => {
+  try {
+    const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+    if (d.event === 'appContext' && d.data?.contact) {
+      contact = d.data.contact;
+      document.getElementById('contactLine').textContent =
+        `${contact.name || 'Unknown'} ${contact.phone_number ? '(' + contact.phone_number + ')' : contact.email || ''}`;
+      init();
+    }
+  } catch(_){}
+});
+window.parent.postMessage('chatwoot-dashboard-app:fetch-info', '*');
+
+async function api(path, opts = {}) {
+  const r = await fetch(`${BASE}/api/v1/accounts/${ACCOUNT_ID}${path}`, {
+    headers: { api_access_token: API_TOKEN, 'Content-Type': 'application/json', ...opts.headers }, ...opts
+  });
+  if (!r.ok) throw new Error(r.status);
+  return r.json();
+}
+
+async function init() {
+  const [convData] = await Promise.all([
+    api(`/contacts/${contact.id}/conversations`),
+    loadAgents(),
+    loadTeams()
+  ]);
+  conversations = (convData.payload || []).sort((a, b) => new Date(b.last_activity_at) - new Date(a.last_activity_at));
+  await Promise.all(conversations.map(async c => {
+    try { c._participants = await api(`/conversations/${c.id}/participants`); }
+    catch(_) { c._participants = []; }
+  }));
+  render();
+}
+
+async function loadAgents() { try { agents = await api('/agents') || []; } catch(_){} }
+async function loadTeams() {
+  try {
+    teams = await api('/teams') || [];
+    await Promise.all(teams.map(async t => {
+      try { t._members = await api(`/teams/${t.id}/team_members`) || []; } catch(_) { t._members = []; }
+    }));
+  } catch(_){}
+}
+
+// ── Render ──
+function render() {
+  const el = document.getElementById('list');
+  if (!conversations.length) { el.innerHTML = '<div class="empty">No conversations for this contact</div>'; return; }
+
+  el.innerHTML = conversations.map((c, i) => {
+    const sel = selectedIds.has(c.id);
+    const status = c.status || 'open';
+    const lastMsg = c.last_non_activity_message?.content || c.messages?.[0]?.content || '';
+    const parts = c._participants || [];
+    const time = fmtDate(c.last_activity_at);
+    const inbox = c.meta?.channel || c.inbox?.name || '';
+
+    return `<div class="conv ${sel ? 'sel' : ''}" data-id="${c.id}" data-idx="${i}">
+      <div class="conv-row">
+        <input type="checkbox" class="conv-cb" ${sel ? 'checked' : ''} onclick="toggleSel(${c.id})">
+        <div class="conv-body">
+          <div class="conv-top">
+            <span class="dot dot-${status}"></span>
+            <span class="conv-id" onclick="openConv(${c.display_id})">#${c.display_id}</span>
+            ${inbox ? `<span class="conv-inbox">${esc(inbox)}</span>` : ''}
+            <span class="conv-time">${time}</span>
+          </div>
+          ${lastMsg ? `<div class="conv-msg">${esc(trunc(lastMsg, 80))}</div>` : ''}
+        </div>
+      </div>
+      <div class="share-row">
+        ${parts.map(p => `<span class="chip chip-shared">${esc(p.name || p.email || 'Agent')} <span class="chip-remove" onclick="removePart(${c.id},${p.id})">&times;</span></span>`).join('')}
+        <span class="share-add" onclick="openDropdown(event, ${c.id})">+ Share</span>
+      </div>
+    </div>`;
+  }).join('');
+  updateBulk();
+}
+
+function openConv(displayId) {
+  window.open(`${BASE}/app/accounts/${ACCOUNT_ID}/conversations/${displayId}`, '_blank');
+}
+
+// ── Selection ──
+function toggleSel(id) { selectedIds.has(id) ? selectedIds.delete(id) : selectedIds.add(id); render(); }
+function selectAllToggle() {
+  if (selectedIds.size === conversations.length) selectedIds.clear();
+  else conversations.forEach(c => selectedIds.add(c.id));
+  render();
+}
+function deselectAll() { selectedIds.clear(); render(); }
+function updateBulk() {
+  const bar = document.getElementById('bulkBar');
+  document.getElementById('bulkCount').textContent = selectedIds.size;
+  bar.classList.toggle('show', selectedIds.size > 0);
+}
+
+// ── Inline dropdown ──
+function openDropdown(evt, convId) {
+  evt.stopPropagation();
+  const dd = document.getElementById('dropdown');
+  ddConvId = convId;
+  document.getElementById('ddSearch').value = '';
+
+  // Position near the click
+  const rect = evt.target.getBoundingClientRect();
+  dd.style.top = (rect.bottom + 4) + 'px';
+  dd.style.left = Math.min(rect.left, window.innerWidth - 260) + 'px';
+  dd.classList.remove('hidden');
+  renderDropdown();
+  setTimeout(() => document.getElementById('ddSearch').focus(), 50);
+}
+
+function closeDropdown() {
+  document.getElementById('dropdown').classList.add('hidden');
+  ddConvId = null;
+}
+
+function renderDropdown() {
+  const conv = conversations.find(c => c.id === ddConvId);
+  if (!conv) return;
+  const partIds = new Set((conv._participants || []).map(p => p.id));
+  const search = document.getElementById('ddSearch').value.toLowerCase();
+  let html = '';
+
+  // Teams
+  const fTeams = teams.filter(t => !search || t.name.toLowerCase().includes(search));
+  if (fTeams.length) {
+    html += '<div class="dd-section"><div class="dd-label">Teams</div>';
+    fTeams.forEach(t => {
+      const memberCount = (t._members || []).length;
+      const allIn = memberCount > 0 && t._members.every(m => partIds.has(m.id));
+      const initials = t.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+      html += `<div class="dd-item ${allIn ? 'active' : ''}" onclick="shareTeam(${t.id})">
+        <div class="dd-avatar dd-avatar-team">${initials}</div>
+        <div><div class="dd-name">${esc(t.name)}</div><div class="dd-sub">${memberCount} members</div></div>
+        ${allIn ? '<span class="dd-check">&#10003;</span>' : ''}
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  // Agents
+  const fAgents = agents.filter(a => !search || a.name?.toLowerCase().includes(search) || a.email?.toLowerCase().includes(search));
+  if (fAgents.length) {
+    html += '<div class="dd-section"><div class="dd-label">Agents</div>';
+    fAgents.forEach(a => {
+      const isIn = partIds.has(a.id);
+      const initials = (a.name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+      html += `<div class="dd-item ${isIn ? 'active' : ''}" onclick="shareAgent(${a.id})">
+        <div class="dd-avatar dd-avatar-agent">${initials}</div>
+        <div><div class="dd-name">${esc(a.name || a.email)}</div><div class="dd-sub">${esc(a.email || '')}</div></div>
+        ${isIn ? '<span class="dd-check">&#10003;</span>' : ''}
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  document.getElementById('ddList').innerHTML = html || '<div style="padding:12px;color:var(--dim);text-align:center">No results</div>';
+}
+
+async function shareAgent(agentId) {
+  if (!ddConvId) return;
+  const conv = conversations.find(c => c.id === ddConvId);
+  const existing = new Set((conv?._participants || []).map(p => p.id));
+  if (existing.has(agentId)) {
+    // Remove
+    existing.delete(agentId);
+  } else {
+    existing.add(agentId);
+  }
+  try {
+    await api(`/conversations/${ddConvId}/participants`, { method: 'PATCH', body: JSON.stringify({ user_ids: [...existing] }) });
+    conv._participants = await api(`/conversations/${ddConvId}/participants`);
+    render();
+    renderDropdown();
+    toast(existing.has(agentId) ? 'Shared' : 'Removed');
+  } catch(e) { toast('Failed: ' + e.message); }
+}
+
+async function shareTeam(teamId) {
+  if (!ddConvId) return;
+  const conv = conversations.find(c => c.id === ddConvId);
+  const team = teams.find(t => t.id === teamId);
+  if (!team) return;
+  const existing = new Set((conv?._participants || []).map(p => p.id));
+  const teamMemberIds = (team._members || []).map(m => m.id);
+  const allIn = teamMemberIds.length > 0 && teamMemberIds.every(id => existing.has(id));
+
+  if (allIn) {
+    teamMemberIds.forEach(id => existing.delete(id));
+  } else {
+    teamMemberIds.forEach(id => existing.add(id));
+  }
+  try {
+    await api(`/conversations/${ddConvId}/participants`, { method: 'PATCH', body: JSON.stringify({ user_ids: [...existing] }) });
+    conv._participants = await api(`/conversations/${ddConvId}/participants`);
+    render();
+    renderDropdown();
+    toast(allIn ? `Removed ${team.name}` : `Shared with ${team.name}`);
+  } catch(e) { toast('Failed: ' + e.message); }
+}
+
+async function removePart(convId, userId) {
+  const conv = conversations.find(c => c.id === convId);
+  const remaining = (conv?._participants || []).filter(p => p.id !== userId).map(p => p.id);
+  try {
+    await api(`/conversations/${convId}/participants`, { method: 'PATCH', body: JSON.stringify({ user_ids: remaining }) });
+    conv._participants = await api(`/conversations/${convId}/participants`);
+    render();
+    toast('Removed');
+  } catch(e) { toast('Failed'); }
+}
+
+// ── Bulk share ──
+async function bulkShare() {
+  // Open dropdown positioned at the bulk bar button
+  const btn = document.querySelector('.bulk-actions .btn-primary');
+  const rect = btn.getBoundingClientRect();
+  ddConvId = '__bulk__';
+  const dd = document.getElementById('dropdown');
+  dd.style.top = (rect.bottom + 4) + 'px';
+  dd.style.left = Math.min(rect.left, window.innerWidth - 260) + 'px';
+  dd.classList.remove('hidden');
+  document.getElementById('ddSearch').value = '';
+  renderBulkDropdown();
+  setTimeout(() => document.getElementById('ddSearch').focus(), 50);
+}
+
+function renderBulkDropdown() {
+  const search = document.getElementById('ddSearch').value.toLowerCase();
+  let html = '';
+
+  const fTeams = teams.filter(t => !search || t.name.toLowerCase().includes(search));
+  if (fTeams.length) {
+    html += '<div class="dd-section"><div class="dd-label">Teams</div>';
+    fTeams.forEach(t => {
+      const initials = t.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+      html += `<div class="dd-item" onclick="bulkShareTeam(${t.id})">
+        <div class="dd-avatar dd-avatar-team">${initials}</div>
+        <div><div class="dd-name">${esc(t.name)}</div><div class="dd-sub">${(t._members||[]).length} members</div></div>
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  const fAgents = agents.filter(a => !search || a.name?.toLowerCase().includes(search) || a.email?.toLowerCase().includes(search));
+  if (fAgents.length) {
+    html += '<div class="dd-section"><div class="dd-label">Agents</div>';
+    fAgents.forEach(a => {
+      const initials = (a.name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+      html += `<div class="dd-item" onclick="bulkShareAgent(${a.id})">
+        <div class="dd-avatar dd-avatar-agent">${initials}</div>
+        <div><div class="dd-name">${esc(a.name || a.email)}</div></div>
+      </div>`;
+    });
+    html += '</div>';
+  }
+  document.getElementById('ddList').innerHTML = html;
+}
+
+async function bulkShareTeam(teamId) {
+  const team = teams.find(t => t.id === teamId);
+  if (!team) return;
+  const memberIds = (team._members || []).map(m => m.id);
+  closeDropdown();
+  let ok = 0;
+  for (const cid of selectedIds) {
+    try {
+      const conv = conversations.find(c => c.id === cid);
+      const existing = (conv?._participants || []).map(p => p.id);
+      const allIds = [...new Set([...existing, ...memberIds])];
+      await api(`/conversations/${cid}/participants`, { method: 'PATCH', body: JSON.stringify({ user_ids: allIds }) });
+      conv._participants = await api(`/conversations/${cid}/participants`);
+      ok++;
+    } catch(_){}
+  }
+  toast(`Shared ${ok} conversation(s) with ${team.name}`);
+  selectedIds.clear();
+  render();
+}
+
+async function bulkShareAgent(agentId) {
+  closeDropdown();
+  let ok = 0;
+  for (const cid of selectedIds) {
+    try {
+      const conv = conversations.find(c => c.id === cid);
+      const existing = (conv?._participants || []).map(p => p.id);
+      const allIds = [...new Set([...existing, agentId])];
+      await api(`/conversations/${cid}/participants`, { method: 'PATCH', body: JSON.stringify({ user_ids: allIds }) });
+      conv._participants = await api(`/conversations/${cid}/participants`);
+      ok++;
+    } catch(_){}
+  }
+  toast(`Shared ${ok} conversation(s)`);
+  selectedIds.clear();
+  render();
+}
+
+async function bulkUnshare() {
+  if (!confirm(`Remove all sharing from ${selectedIds.size} conversation(s)?`)) return;
+  let ok = 0;
+  for (const cid of selectedIds) {
+    try {
+      await api(`/conversations/${cid}/participants`, { method: 'PATCH', body: JSON.stringify({ user_ids: [] }) });
+      const conv = conversations.find(c => c.id === cid);
+      if (conv) conv._participants = [];
+      ok++;
+    } catch(_){}
+  }
+  toast(`Unshared ${ok} conversation(s)`);
+  selectedIds.clear();
+  render();
+}
+
+// ── Keyboard ──
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') { if (e.key === 'Escape') { closeDropdown(); e.target.blur(); } return; }
+  const n = conversations.length;
+  switch(e.key) {
+    case 'j': case 'ArrowDown': e.preventDefault(); focusIdx = Math.min(focusIdx + 1, n - 1); highlightFocus(); break;
+    case 'k': case 'ArrowUp': e.preventDefault(); focusIdx = Math.max(focusIdx - 1, 0); highlightFocus(); break;
+    case ' ': e.preventDefault(); if (focusIdx >= 0 && focusIdx < n) toggleSel(conversations[focusIdx].id); break;
+    case 'a': selectAllToggle(); break;
+    case 's': if (selectedIds.size) bulkShare(); break;
+    case 'Escape': closeDropdown(); deselectAll(); break;
+  }
+});
+
+function highlightFocus() {
+  document.querySelectorAll('.conv').forEach((el, i) => {
+    el.style.outline = i === focusIdx ? '2px solid var(--accent)' : 'none';
+    if (i === focusIdx) el.scrollIntoView({ block: 'nearest' });
+  });
+}
+
+// Close dropdown on outside click
+document.addEventListener('click', e => {
+  const dd = document.getElementById('dropdown');
+  if (!dd.classList.contains('hidden') && !dd.contains(e.target) && !e.target.classList.contains('share-add')) {
+    closeDropdown();
+  }
+});
+
+// ── Utils ──
+function fmtDate(d) {
+  if (!d) return '';
+  const dt = new Date(d);
+  const now = new Date();
+  const diff = (now - dt) / 1000;
+  if (diff < 60) return 'now';
+  if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+  if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+  return dt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+}
+function trunc(s, n) { return s && s.length > n ? s.slice(0, n) + '...' : s || ''; }
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function toast(m) { const t = document.getElementById('toast'); t.textContent = m; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2000); }
+
+setTimeout(() => {
+  if (!contact) {
+    document.getElementById('contactLine').textContent = '';
+    document.getElementById('list').innerHTML = '<div class="empty">Open a conversation to manage sharing</div>';
+  }
+}, 3000);
+</script>
+</body>
+</html>
