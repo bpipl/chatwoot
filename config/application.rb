@@ -52,7 +52,8 @@ module Chatwoot
     Dir[enterprise_initializers.join('**/*.rb')].each { |f| require f } if enterprise_initializers.exist?
 
     # [CUSTOM] Load custom extensions (bpipl/chatwoot fork)
-    if ChatwootApp.custom?
+    # Note: ChatwootApp is not available yet at this point, so check directory directly
+    if Rails.root.join('custom').exist?
       config.eager_load_paths += Dir["#{Rails.root}/custom/app/**"]
       config.eager_load_paths << Rails.root.join('custom/lib')
       config.paths['app/views'].unshift('custom/app/views')
