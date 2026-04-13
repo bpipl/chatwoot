@@ -25,5 +25,26 @@ Rails.application.config.after_initialize do
 
     config_qty = InstallationConfig.find_or_create_by(name: 'INSTALLATION_PRICING_PLAN_QUANTITY')
     config_qty.update(value: 100) if config_qty.value.blank? || config_qty.value.to_i.zero?
+
+    # Enable premium features for all accounts.
+    # These are enterprise-gated features that require both the plan AND
+    # per-account feature flags to be enabled.
+    enterprise_features = %w[
+      custom_roles
+      audit_logs
+      sla
+      captain_integration
+      disable_branding
+      advanced_assignment
+      custom_tools
+    ]
+
+    Account.find_each do |account|
+      enterprise_features.each do |feature|
+        method_name = "feature_#{feature}="
+        account.send(method_name, true) if account.respond_to?(method_name)
+      end
+      account.save if account.changed?
+    end
   end
 end
