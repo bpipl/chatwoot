@@ -1,0 +1,10 @@
+# Build custom Chatwoot image by overlaying custom/ directory
+# on top of the official prebuilt image. This avoids the full
+# Ruby/Node build and uses the proven official image as base.
+FROM chatwoot/chatwoot:v4.12.1
+
+# Copy custom directory into the container
+COPY custom/ /app/custom/
+
+# Copy modified application.rb (adds custom/ autoload paths)
+COPY config/application.rb /app/config/application.rb
